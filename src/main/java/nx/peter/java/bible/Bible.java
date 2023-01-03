@@ -1,5 +1,6 @@
 package nx.peter.java.bible;
 
+import nx.peter.Main;
 import nx.peter.java.json.JsonArray;
 import nx.peter.java.json.reader.JsonObject;
 import nx.peter.java.util.Random;
