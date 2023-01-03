@@ -1,6 +1,5 @@
 package nx.peter.java.bible;
 
-import nx.peter.Main;
 import nx.peter.java.json.JsonArray;
 import nx.peter.java.json.reader.JsonObject;
 import nx.peter.java.util.Random;
@@ -18,6 +17,8 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public interface Bible {
+    String VERSION = "version", TESTAMENTS = "testaments";
+
     Books getBooks();
 
     String getName();
@@ -48,19 +49,35 @@ public interface Bible {
 
     Testament getTestament(Era era);
 
+    JsonObject toJson();
+
     void findChapters(CharSequence query, OnSearchListener<Chapter> listener);
 
+    void findChapters(CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener);
+
+    void findChapters(Era era, CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener);
+
     void findChapters(Era era, CharSequence query, OnSearchListener<Chapter> listener);
+
+    void findChapters(CharSequence book, CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener);
 
     void findChapters(CharSequence book, CharSequence query, OnSearchListener<Chapter> listener);
 
     void findVerses(CharSequence query, OnSearchListener<Verse> listener);
 
+    void findVerses(CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener);
+
     void findVerses(Era era, CharSequence query, OnSearchListener<Verse> listener);
+
+    void findVerses(Era era, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener);
 
     void findVerses(CharSequence book, CharSequence query, OnSearchListener<Verse> listener);
 
+    void findVerses(CharSequence book, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener);
+
     void findVerses(CharSequence book, int chapter, CharSequence query, OnSearchListener<Verse> listener);
+
+    void findVerses(CharSequence book, int chapter, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener);
 
 
     enum Era {
@@ -144,13 +161,23 @@ public interface Bible {
 
         Result<Chapter> findChapters(CharSequence query);
 
+        Result<Chapter> findChapters(CharSequence query, int maxSize, boolean random);
+
         Result<Chapter> findChapters(CharSequence book, CharSequence query);
+
+        Result<Chapter> findChapters(CharSequence book, CharSequence query, int maxSize, boolean random);
 
         Result<Verse> findVerses(CharSequence query);
 
+        Result<Verse> findVerses(CharSequence query, int maxSize, boolean random);
+
         Result<Verse> findVerses(CharSequence book, CharSequence query);
 
+        Result<Verse> findVerses(CharSequence book, CharSequence query, int maxSize, boolean random);
+
         Result<Verse> findVerses(CharSequence book, int chapter, CharSequence query);
+
+        Result<Verse> findVerses(CharSequence book, int chapter, CharSequence query, int maxSize, boolean random);
 
         class Builder {
             protected Era era;
@@ -186,15 +213,67 @@ public interface Bible {
                     }
 
                     @Override
+                    public Result<Verse> findVerses(CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
+                    }
+
+                    @Override
                     public Result<Verse> findVerses(CharSequence book, CharSequence query) {
                         Book b = getBook(book);
                         return b != null ? b.findVerses(query) : new Result<>(query, "");
                     }
 
                     @Override
+                    public Result<Verse> findVerses(CharSequence book, CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(book, query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
+                    }
+
+                    private boolean contain(List<Verse> verses, Verse verse) {
+                        return new Verses(verses).contains(verse);
+                    }
+
+                    @Override
                     public Result<Verse> findVerses(CharSequence book, int chapter, CharSequence query) {
                         Chapter c = getChapter(book, chapter);
                         return c != null ? c.findVerses(query) : new Result<>(query, "");
+                    }
+
+                    @Override
+                    public Result<Verse> findVerses(CharSequence book, int chapter, CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(book, chapter, query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
                     }
 
                     @Override
@@ -350,9 +429,45 @@ public interface Bible {
                     }
 
                     @Override
+                    public Result<Chapter> findChapters(CharSequence query, int maxSize, boolean random) {
+                        Result<Chapter> result = findChapters(query);
+                        if (result.size() > maxSize) {
+                            List<Chapter> chapters = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Chapter chapter = random ? result.getAny() : result.get(i);
+                                while (contains(chapters, chapter))
+                                    chapter = result.getAny();
+                                chapters.add(chapter);
+                            }
+                            result = new Result<>(query, result.source, chapters);
+                        }
+                        return result;
+                    }
+
+                    @Override
                     public Result<Chapter> findChapters(CharSequence book, CharSequence query) {
                         Book b = getBook(book);
                         return b != null ? b.findChapters(query) : new Result<>(query, "");
+                    }
+
+                    private boolean contains(List<Chapter> chapters, Chapter chapter) {
+                        return new Chapters(chapters).contains(chapter);
+                    }
+
+                    @Override
+                    public Result<Chapter> findChapters(CharSequence book, CharSequence query, int maxSize, boolean random) {
+                        Result<Chapter> result = findChapters(book, query);
+                        if (result.size() > maxSize) {
+                            List<Chapter> chapters = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Chapter chapter = random ? result.getAny() : result.get(i);
+                                while (contains(chapters, chapter))
+                                    chapter = result.getAny();
+                                chapters.add(chapter);
+                            }
+                            result = new Result<>(query, result.source, chapters);
+                        }
+                        return result;
                     }
                 };
             }
@@ -389,9 +504,15 @@ public interface Bible {
 
         Result<Chapter> findChapters(CharSequence query);
 
+        Result<Chapter> findChapters(CharSequence query, int maxSize, boolean random);
+
         Result<Verse> findVerses(CharSequence query);
 
+        Result<Verse> findVerses(CharSequence query, int maxSize, boolean random);
+
         Result<Verse> findVerses(int chapter, CharSequence query);
+
+        Result<Verse> findVerses(int chapter, CharSequence query, int maxSize, boolean random);
 
         class Builder {
             protected int index;
@@ -449,9 +570,45 @@ public interface Bible {
                     }
 
                     @Override
+                    public Result<Verse> findVerses(CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
+                    }
+
+                    private boolean contain(List<Verse> verses, Verse verse) {
+                        return new Verses(verses).contains(verse);
+                    }
+
+                    @Override
                     public Result<Verse> findVerses(int chapter, CharSequence query) {
                         Chapter c = getChapter(chapter);
                         return c != null ? c.findVerses(query) : new Result<>(query, "");
+                    }
+
+                    @Override
+                    public Result<Verse> findVerses(int chapter, CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(chapter, query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
                     }
 
                     @Override
@@ -573,6 +730,26 @@ public interface Bible {
                             if (chapter.contains(query)) chapters.add(chapter);
                         return new Result<>(query, getContent(), chapters);
                     }
+
+                    @Override
+                    public Result<Chapter> findChapters(CharSequence query, int maxSize, boolean random) {
+                        Result<Chapter> result = findChapters(query);
+                        if (result.size() > maxSize) {
+                            List<Chapter> chapters = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Chapter chapter = random ? result.getAny() : result.get(i);
+                                while (contains(chapters, chapter))
+                                    chapter = result.getAny();
+                                chapters.add(chapter);
+                            }
+                            result = new Result<>(query, result.source, chapters);
+                        }
+                        return result;
+                    }
+
+                    private boolean contains(List<Chapter> chapters, Chapter chapter) {
+                        return new Chapters(chapters).contains(chapter);
+                    }
                 };
             }
         }
@@ -596,6 +773,8 @@ public interface Bible {
         boolean contains(CharSequence verse);
 
         Result<Verse> findVerses(CharSequence query);
+
+        Result<Verse> findVerses(CharSequence query, int maxSize, boolean random);
 
         class Builder {
             protected Era era;
@@ -667,6 +846,26 @@ public interface Bible {
                         for (Verse verse : getVerses())
                             if (verse.contains(query)) verses.add(verse);
                         return new Result<>(query, getContent(), verses);
+                    }
+
+                    @Override
+                    public Result<Verse> findVerses(CharSequence query, int maxSize, boolean random) {
+                        Result<Verse> result = findVerses(query);
+                        if (result.size() > maxSize && maxSize > 0) {
+                            List<Verse> verses = new ArrayList<>();
+                            for (int i = 1; i <= maxSize; i++) {
+                                Verse verse = random ? result.getAny() : result.get(i);
+                                while (contain(verses, verse))
+                                    verse = result.getAny();
+                                verses.add(verse);
+                            }
+                            result = new Result<>(query, result.source, verses);
+                        }
+                        return result;
+                    }
+
+                    private boolean contain(List<Verse> verses, Verse verse) {
+                        return new Verses(verses).contains(verse);
                     }
 
 
@@ -994,7 +1193,8 @@ public interface Bible {
 
         public Book get(CharSequence title) {
             for (Book b : items)
-                if (b.getTitle().toLowerCase().contentEquals(title.toString().toLowerCase()) || b.getAbbreviation().toLowerCase().contentEquals(title.toString().toLowerCase())) return b;
+                if (b.getTitle().toLowerCase().contentEquals(title.toString().toLowerCase()) || b.getAbbreviation().toLowerCase().contentEquals(title.toString().toLowerCase()))
+                    return b;
             return null;
         }
 
@@ -1042,6 +1242,12 @@ public interface Bible {
     }
 
 
+    interface Data<I> extends Iterable<I> {
+        I get(int index);
+
+        boolean contains(I item);
+    }
+
     abstract class Array<A extends Array<A, I>, I extends Item<I>> implements Iterable<I> {
         protected List<I> items;
 
@@ -1088,7 +1294,11 @@ public interface Bible {
         }
 
         public boolean contains(I item) {
-            return items.contains(item);
+            if (item != null)
+                for (I i : items)
+                    if (i.equals(item))
+                        return true;
+            return false;
         }
 
         public boolean isEmpty() {
@@ -1160,8 +1370,9 @@ public interface Bible {
                 if (index > 0) if (texts.isNotEmpty()) {
                     Letters.Words words = texts.getWords();
                     // Main.println(words);
-                    if (words.size() == 1 || texts.startsWith("Revelation ") || texts.startsWith("Song of ") || texts.startsWith("I ") || texts.startsWith("II") || texts.startsWith("III") || (words.size() == 2 && (texts.startsWith("1") || texts.startsWith("2") || texts.startsWith("3"))) ) {
-                        if (words.getFirst().contentEquals("Genesis") || words.getFirst().contentEquals("Génesis")) testament = new Testament.Builder(Era.Old);
+                    if (words.size() == 1 || texts.startsWith("Revelation ") || texts.startsWith("Song of ") || texts.startsWith("I ") || texts.startsWith("II") || texts.startsWith("III") || (words.size() == 2 && (texts.startsWith("1") || texts.startsWith("2") || texts.startsWith("3")))) {
+                        if (words.getFirst().contentEquals("Genesis") || words.getFirst().contentEquals("Génesis"))
+                            testament = new Testament.Builder(Era.Old);
                         else if (words.getFirst().contentEquals("Matthew")) {
                             if (testament != null) tOld = testament.build();
                             testament = new Testament.Builder(Era.New);
@@ -1316,6 +1527,19 @@ public interface Bible {
         }
 
         @Override
+        public JsonObject toJson() {
+            nx.peter.java.json.JsonObject object = new nx.peter.java.json.JsonObject();
+            object.add(VERSION, version.toString());
+
+            // Add Testaments (Old & New)
+            JsonArray array = new JsonArray();
+            for (Testament testament : getTestaments())
+                array.add(testament.toJson());
+            object.add(TESTAMENTS, array);
+            return object;
+        }
+
+        @Override
         public void findChapters(CharSequence query, OnSearchListener<Chapter> listener) {
             List<Chapter> chapters = new ArrayList<>();
             Thread finder = new Thread(() -> findChapters(query, chapters));
@@ -1412,6 +1636,24 @@ public interface Bible {
         protected void findChapters(CharSequence book, CharSequence query, List<Chapter> chapters) {
             if (tOld != null) chapters.addAll(tOld.findChapters(book, query).toList());
             if (tNew != null) chapters.addAll(tNew.findChapters(book, query).toList());
+        }
+
+
+        protected void findChapters(CharSequence query, int maxSize, boolean random, List<Chapter> chapters) {
+            if (tOld != null) chapters.addAll(tOld.findChapters(query, maxSize, random).toList());
+            if (tNew != null) chapters.addAll(tNew.findChapters(query, maxSize, random).toList());
+        }
+
+        protected void findChapters(Era era, CharSequence query, int maxSize, boolean random, List<Chapter> chapters) {
+            if (tOld != null && tOld.getEra().equals(era))
+                chapters.addAll(tOld.findChapters(query, maxSize, random).toList());
+            else if (tNew != null && tNew.getEra().equals(era))
+                chapters.addAll(tNew.findChapters(query, maxSize, random).toList());
+        }
+
+        protected void findChapters(CharSequence book, CharSequence query, int maxSize, boolean random, List<Chapter> chapters) {
+            if (tOld != null) chapters.addAll(tOld.findChapters(book, query, maxSize, random).toList());
+            if (tNew != null) chapters.addAll(tNew.findChapters(book, query, maxSize, random).toList());
         }
 
 
@@ -1527,6 +1769,202 @@ public interface Bible {
             }).start();
         }
 
+        @Override
+        public void findChapters(CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener) {
+            List<Chapter> chapters = new ArrayList<>();
+            Thread finder = new Thread(() -> findChapters(query, maxSize, random, chapters));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), chapters), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), chapters), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findChapters(Era era, CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener) {
+            List<Chapter> chapters = new ArrayList<>();
+            Thread finder = new Thread(() -> findChapters(era, query, maxSize, random, chapters));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), chapters), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), chapters), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findChapters(CharSequence book, CharSequence query, int maxSize, boolean random, OnSearchListener<Chapter> listener) {
+            List<Chapter> chapters = new ArrayList<>();
+            Thread finder = new Thread(() -> findChapters(book, query, maxSize, random, chapters));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), chapters), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), chapters), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findVerses(CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener) {
+            List<Verse> verses = new ArrayList<>();
+            Thread finder = new Thread(() -> findVerses(query, maxSize, random, verses));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), verses), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), verses), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findVerses(Era era, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener) {
+            List<Verse> verses = new ArrayList<>();
+            Thread finder = new Thread(() -> findVerses(era, query, maxSize, random, verses));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), verses), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), verses), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findVerses(CharSequence book, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener) {
+            List<Verse> verses = new ArrayList<>();
+            Thread finder = new Thread(() -> findVerses(book, query, maxSize, random, verses));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), verses), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), verses), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void findVerses(CharSequence book, int chapter, CharSequence query, int maxSize, boolean random, OnSearchListener<Verse> listener) {
+            List<Verse> verses = new ArrayList<>();
+            Thread finder = new Thread(() -> findVerses(book, chapter, query, maxSize, random, verses));
+            finder.start();
+            AtomicLong start = new AtomicLong(System.currentTimeMillis());
+            final int[] counter = {0};
+
+            new Thread(() -> {
+                while (finder.getState().equals(Thread.State.RUNNABLE)) {
+                    long current = System.currentTimeMillis();
+                    //
+                    if ((current - start.get()) % 1000 == 0 && !finder.getState().equals(Thread.State.TERMINATED)) {
+                        int duration = (int) ((current - start.get()) / 1000);
+                        if (duration - counter[0] >= 1) {
+                            listener.onSearchInProgress(new Result<>(query, getContent(), verses), duration);
+                            counter[0] = duration;
+                        }
+                    }
+
+                    if (finder.getState().equals(Thread.State.TERMINATED)) {
+                        listener.onSearchCompleted(new Result<>(query, getContent(), verses), System.currentTimeMillis() - start.get());
+                        break;
+                    }
+                }
+            }).start();
+        }
+
         protected void findVerses(CharSequence query, List<Verse> result) {
             if (tOld != null) result.addAll(tOld.findVerses(query).toList());
             if (tNew != null) result.addAll(tNew.findVerses(query).toList());
@@ -1545,6 +1983,27 @@ public interface Bible {
         protected void findVerses(CharSequence book, int chapter, CharSequence query, List<Verse> result) {
             if (tOld != null) result.addAll(tOld.findVerses(book, chapter, query).toList());
             if (tNew != null) result.addAll(tNew.findVerses(book, chapter, query).toList());
+        }
+
+
+        protected void findVerses(CharSequence query, int maxSize, boolean random, List<Verse> result) {
+            if (tOld != null) result.addAll(tOld.findVerses(query, maxSize, random).toList());
+            if (tNew != null) result.addAll(tNew.findVerses(query, maxSize, random).toList());
+        }
+
+        protected void findVerses(Era testament, CharSequence query, int maxSize, boolean random, List<Verse> result) {
+            Testament t = getTestament(testament);
+            result.addAll(t != null ? t.findVerses(query, maxSize, random).toList() : new ArrayList<>());
+        }
+
+        protected void findVerses(CharSequence book, CharSequence query, int maxSize, boolean random, List<Verse> result) {
+            if (tOld != null) result.addAll(tOld.findVerses(book, query, maxSize, random).toList());
+            if (tNew != null) result.addAll(tNew.findVerses(book, query, maxSize, random).toList());
+        }
+
+        protected void findVerses(CharSequence book, int chapter, CharSequence query, int maxSize, boolean random, List<Verse> result) {
+            if (tOld != null) result.addAll(tOld.findVerses(book, chapter, query, maxSize, random).toList());
+            if (tNew != null) result.addAll(tNew.findVerses(book, chapter, query, maxSize, random).toList());
         }
 
         @Override
